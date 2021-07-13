@@ -33,6 +33,7 @@ import           Playground.Types     (KnownCurrency (..))
 import           Prelude              (IO, Semigroup (..), String, undefined)
 import           Text.Printf          (printf)
 
+-- Custom data object
 data MyRedeemer = MyRedeemer
     { flag1 :: Bool
     , flag2 :: Bool
@@ -43,23 +44,29 @@ PlutusTx.unstableMakeIsData ''MyRedeemer
 {-# INLINABLE mkValidator #-}
 -- This should validate if and only if the two Booleans in the redeemer are equal!
 mkValidator :: () -> MyRedeemer -> ScriptContext -> Bool
-mkValidator _ _ _ = True -- FIX ME!
+mkValidator _ (MyRedeemer a b) _ = traceIfFalse "both should be equal" $ a == b -- FIX ME!
 
+-- Implement me!
 data Typed
 instance Scripts.ValidatorTypes Typed where
-    -- Implement me!
+    type instance DatumType Typed = ()
+    type instance RedeemerType Typed = MyRedeemer
 
 typedValidator :: Scripts.TypedValidator Typed
-typedValidator = undefined -- FIX ME!
+typedValidator = Scripts.mkTypedValidator @Typed
+    $$(PlutusTx.compile [|| mkValidator ||])
+    $$(PlutusTx.compile [|| wrap ||])
+  where
+    wrap = Scripts.wrapValidator @() @MyRedeemer -- FIX ME!
 
 validator :: Validator
-validator = undefined -- FIX ME!
+validator = Scripts.validatorScript typedValidator -- FIX ME!
 
 valHash :: Ledger.ValidatorHash
-valHash = undefined -- FIX ME!
+valHash = Scripts.validatorHash typedValidator -- FIX ME!
 
 scrAddress :: Ledger.Address
-scrAddress = undefined -- FIX ME!
+scrAddress = scriptAddress validator -- FIX ME!
 
 type GiftSchema =
             Endpoint "give" Integer
