@@ -29,23 +29,35 @@ import           Text.Printf         (printf)
 
 {-# OPTIONS_GHC -fno-warn-unused-imports #-}
 
+-- Inlines the function in order to be used in a template
 {-# INLINABLE mkValidator #-}
 mkValidator :: Data -> Data -> Data -> ()
+-- Avoid all the inputs and return nothing
 mkValidator _ _ _ = ()
 
+-- Compile the Haskel code into plutus code using templates
+-- The template is like macros in Julia
 validator :: Validator
 validator = mkValidatorScript $$(PlutusTx.compile [|| mkValidator ||])
 
-valHash :: Ledger.ValidatorHash
-valHash = Scripts.validatorHash validator
 
+valHash :: Ledger.ValidatorHash
+-- Scripts.validatorHash function
+valHash = Scripts.validatorHash validator
+-- > valHash returns a hash
+
+-- turn the  validator into an address
 scrAddress :: Ledger.Address
 scrAddress = scriptAddress validator
+-- > scrAddress returns an element of type address
 
+-- to the address defined above we can send ADA using the "give" endpoint
+-- "grab" spend the money sending to the wallets
 type GiftSchema =
             Endpoint "give" Integer
         .\/ Endpoint "grab" ()
 
+-- Define the endpoint functions
 give :: AsContractError e => Integer -> Contract w s e ()
 give amount = do
     let tx = mustPayToOtherScript valHash (Datum $ Constr 0 []) $ Ada.lovelaceValueOf amount

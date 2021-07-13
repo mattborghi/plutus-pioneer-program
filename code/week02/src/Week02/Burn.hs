@@ -32,6 +32,7 @@ import           Text.Printf         (printf)
 
 {-# INLINABLE mkValidator #-}
 mkValidator :: Data -> Data -> Data -> ()
+-- Avoids all inputs but always fails with a trace error message
 mkValidator _ _ _ = traceError "BURNT!"
 
 validator :: Validator

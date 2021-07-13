@@ -30,8 +30,18 @@ import           Playground.Types     (KnownCurrency (..))
 import           Prelude              (IO, Semigroup (..), String)
 import           Text.Printf          (printf)
 
-newtype MySillyRedeemer = MySillyRedeemer Integer
+-- Instead of an Integer for redeemer we want a custom data type
 
+-- We will be using IsData for that
+-- import PlutusTx.IsData.Class
+-- This class has to functions:
+-- 1. toData
+-- 2. fromData
+-- > :i IsData
+
+-- Wraps an Integer
+newtype MySillyRedeemer = MySillyRedeemer Integer
+-- This is like an instantiation of the data type made at compile time 
 PlutusTx.unstableMakeIsData ''MySillyRedeemer
 
 {-# INLINABLE mkValidator #-}
@@ -77,6 +87,7 @@ grab r = do
         lookups = Constraints.unspentOutputs utxos      <>
                   Constraints.otherScript validator
         tx :: TxConstraints Void Void
+        -- Here, we changed I r to the function toData
         tx      = mconcat [mustSpendScriptOutput oref $ Redeemer $ PlutusTx.toData (MySillyRedeemer r) | oref <- orefs]
     ledgerTx <- submitTxConstraintsWith @Void lookups tx
     void $ awaitTxConfirmed $ txId ledgerTx

@@ -31,9 +31,15 @@ import           Prelude              (IO, Semigroup (..), String)
 import           Text.Printf          (printf)
 
 {-# INLINABLE mkValidator #-}
+-- The result of this example is the same of FortyTwo.hs
+-- Now instead of returning a null which is not Haskellian return a Bool
 mkValidator :: () -> Integer -> ScriptContext -> Bool
+-- We have to remove what was before because we dont have a Data object
+-- and in order to show error message if r != 42 we use traceIfFalse
 mkValidator _ r _ = traceIfFalse "wrong redeemer" $ r == 42
 
+-- Define a custom type object
+-- Type validation instead of untyped validation
 data Typed
 instance Scripts.ValidatorTypes Typed where
     type instance DatumType Typed = ()

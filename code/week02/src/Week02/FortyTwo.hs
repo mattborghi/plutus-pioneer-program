@@ -32,6 +32,8 @@ import           Text.Printf         (printf)
 
 {-# INLINABLE mkValidator #-}
 mkValidator :: Data -> Data -> Data -> ()
+-- Now the redeemer argument is analyzed
+-- If the grab value it's equal to 42 avoid it if not send an error message
 mkValidator _ r _
     | r == I 42 = ()
     | otherwise = traceError "wrong redeemer"
