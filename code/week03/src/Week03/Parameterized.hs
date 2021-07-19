@@ -13,6 +13,7 @@
 
 {-# OPTIONS_GHC -fno-warn-unused-imports #-}
 
+-- Parameterized contracts
 module Week03.Parameterized where
 
 import           Control.Monad        hiding (fmap)
@@ -39,7 +40,7 @@ data VestingParam = VestingParam
     { beneficiary :: PubKeyHash
     , deadline    :: POSIXTime
     } deriving Show
-
+-- Lifting params for macros
 PlutusTx.makeLift ''VestingParam
 
 {-# INLINABLE mkValidator #-}
@@ -61,8 +62,11 @@ instance Scripts.ValidatorTypes Vesting where
     type instance DatumType Vesting = ()
     type instance RedeemerType Vesting = ()
 
+-- Define a TypedValidator whose value depends on some parameters
 typedValidator :: VestingParam -> Scripts.TypedValidator Vesting
 typedValidator p = Scripts.mkTypedValidator @Vesting
+    -- This doesnt work because Oxford brackets don't know what `p` is at runtime
+    -- (PlutusTx.compile [|| mkValidator p ||])
     ($$(PlutusTx.compile [|| mkValidator ||]) `PlutusTx.applyCode` PlutusTx.liftCode p)
     $$(PlutusTx.compile [|| wrap ||])
   where

@@ -34,6 +34,9 @@ import           Playground.Types     (KnownCurrency (..))
 import           Prelude              (IO, Semigroup (..), Show (..), String)
 import           Text.Printf          (printf)
 
+-- Example:
+-- Gift a child ADA when he/she turns 18 or 21.
+-- Put money into a script and only the dedicated person can retrieve it when the deadline has been reached.
 data VestingDatum = VestingDatum
     { beneficiary :: PubKeyHash
     , deadline    :: POSIXTime
@@ -41,23 +44,29 @@ data VestingDatum = VestingDatum
 
 PlutusTx.unstableMakeIsData ''VestingDatum
 
+-- We dont need a redeemer because it's contained in the transaction.
 {-# INLINABLE mkValidator #-}
 mkValidator :: VestingDatum -> () -> ScriptContext -> Bool
+-- We need to make sure the deadline is not in the past and the beneficiary has signed.
 mkValidator dat () ctx = traceIfFalse "beneficiary's signature missing" signedByBeneficiary &&
                          traceIfFalse "deadline not reached" deadlineReached
   where
+    -- get info from context
     info :: TxInfo
     info = scriptContextTxInfo ctx
 
     signedByBeneficiary :: Bool
+    -- Use txSignedBy to check if the transaction has been signed by the beneficiary.
     signedByBeneficiary = txSignedBy info $ beneficiary dat
-
+    -- Use intervals to check if the deadline has been reached.
     deadlineReached :: Bool
     deadlineReached = contains (from $ deadline dat) $ txInfoValidRange info
 
 data Vesting
 instance Scripts.ValidatorTypes Vesting where
+    -- DatumType is of type VestingDatum 
     type instance DatumType Vesting = VestingDatum
+    -- ReedemerType is of type unit
     type instance RedeemerType Vesting = ()
 
 typedValidator :: Scripts.TypedValidator Vesting
@@ -76,12 +85,14 @@ valHash = Scripts.validatorHash typedValidator
 scrAddress :: Ledger.Address
 scrAddress = scriptAddress validator
 
+-- off chain validation: is not the topic of this lecture
 data GiveParams = GiveParams
     { gpBeneficiary :: !PubKeyHash
     , gpDeadline    :: !POSIXTime
     , gpAmount      :: !Integer
     } deriving (Generic, ToJSON, FromJSON, ToSchema)
 
+-- endpoints to expose to the client
 type VestingSchema =
             Endpoint "give" GiveParams
         .\/ Endpoint "grab" ()
