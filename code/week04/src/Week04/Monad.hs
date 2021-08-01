@@ -17,10 +17,12 @@ threeInts mx my mz =
     mz >>= \m ->
     let s = k + l + m in return s
 
+-- Exactly the same as before but using do notation
 threeInts' :: Monad m => m Int -> m Int -> m Int -> m Int
 threeInts' mx my mz = do
     k <- mx
     l <- my
     m <- mz
-    let s = k + l + m
+    let s = k + l + m -- 'in' not needed in do block
     return s
+    -- return $ k + l + m
