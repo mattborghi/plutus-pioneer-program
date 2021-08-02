@@ -10,6 +10,8 @@
 {-# LANGUAGE TypeFamilies        #-}
 {-# LANGUAGE TypeOperators       #-}
 
+-- Example of a minting policy
+-- No restrictions for minting and buying
 module Week05.Free where
 
 import           Control.Monad          hiding (fmap)
@@ -32,16 +34,24 @@ import           Prelude                (IO, Show (..), String)
 import           Text.Printf            (printf)
 import           Wallet.Emulator.Wallet
 
+-- Validator takes Datum Redeemer and Context
+-- Redeemer is unit ()
+-- The INLINABLE is for the macro below
 {-# INLINABLE mkPolicy #-}
 mkPolicy :: () -> ScriptContext -> Bool
+-- simplest policy always returns true
 mkPolicy () _ = True
 
+-- Compile policy to Pluto script
 policy :: Scripts.MintingPolicy
+-- A little different as validators
 policy = mkMintingPolicyScript $$(PlutusTx.compile [|| Scripts.wrapMintingPolicy mkPolicy ||])
 
 curSymbol :: CurrencySymbol
 curSymbol = scriptCurrencySymbol policy
 
+-- This is the off-chain part
+-- The above, the on-chain
 data MintParams = MintParams
     { mpTokenName :: !TokenName
     , mpAmount    :: !Integer
@@ -63,12 +73,14 @@ endpoints = mint' >> endpoints
   where
     mint' = endpoint @"mint" >>= mint
 
+-- Boilerplate to test in the playground
 mkSchemaDefinitions ''FreeSchema
 
 mkKnownCurrencies []
-
+-- Boilerplate to use the EmulatorTrace
 test :: IO ()
 test = runEmulatorTraceIO $ do
+    -- Define token name
     let tn = "ABC"
     h1 <- activateContractWallet (Wallet 1) endpoints
     h2 <- activateContractWallet (Wallet 2) endpoints

@@ -10,6 +10,7 @@
 {-# LANGUAGE TypeFamilies        #-}
 {-# LANGUAGE TypeOperators       #-}
 
+-- A more complete minting example
 module Week05.Signed where
 
 import           Control.Monad          hiding (fmap)
@@ -32,10 +33,11 @@ import           Prelude                (IO, Show (..), String)
 import           Text.Printf            (printf)
 import           Wallet.Emulator.Wallet
 
+-- Now we pass a hash for minting
 {-# INLINABLE mkPolicy #-}
 mkPolicy :: PubKeyHash -> () -> ScriptContext -> Bool
 mkPolicy pkh () ctx = txSignedBy (scriptContextTxInfo ctx) pkh
-
+-- MintingPolicy now is a function of hash
 policy :: PubKeyHash -> Scripts.MintingPolicy
 policy pkh = mkMintingPolicyScript $
     $$(PlutusTx.compile [|| Scripts.wrapMintingPolicy . mkPolicy ||])
@@ -54,6 +56,7 @@ type SignedSchema = Endpoint "mint" MintParams
 
 mint :: MintParams -> Contract w SignedSchema Text ()
 mint mp = do
+    -- Get our own pub key
     pkh <- pubKeyHash <$> Contract.ownPubKey
     let val     = Value.singleton (curSymbol pkh) (mpTokenName mp) (mpAmount mp)
         lookups = Constraints.mintingPolicy $ policy pkh

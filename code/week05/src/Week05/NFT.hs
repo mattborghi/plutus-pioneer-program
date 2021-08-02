@@ -10,6 +10,7 @@
 {-# LANGUAGE TypeFamilies        #-}
 {-# LANGUAGE TypeOperators       #-}
 
+-- NFT: only one can exist
 module Week05.NFT where
 
 import           Control.Monad          hiding (fmap)
@@ -31,22 +32,30 @@ import           Prelude                (IO, Semigroup (..), Show (..), String)
 import           Text.Printf            (printf)
 import           Wallet.Emulator.Wallet
 
+-- Parameters of the policy function:
+-- TxOutRef -> References Transaction output utxo
+-- TokenName -> token name of the NFT
 {-# INLINABLE mkPolicy #-}
 mkPolicy :: TxOutRef -> TokenName -> () -> ScriptContext -> Bool
+-- we dont use redeemer
 mkPolicy oref tn () ctx = traceIfFalse "UTxO not consumed"   hasUTxO           &&
                           traceIfFalse "wrong amount minted" checkMintedAmount
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
-
+    -- inside TxInfo and TxInInfo input field we have a field txInInfoOutRef :: TxOutRef
     hasUTxO :: Bool
+    -- is any input that consumes oref output?
     hasUTxO = any (\i -> txInInfoOutRef i == oref) $ txInfoInputs info
 
     checkMintedAmount :: Bool
+    -- flattenValue turns nested maps into a flattened tripplet 
     checkMintedAmount = case flattenValue (txInfoForge info) of
+        -- check currency, amount and token are the expected
         [(cs, tn', amt)] -> cs  == ownCurrencySymbol ctx && tn' == tn && amt == 1
         _                -> False
 
+-- compile the policy function into a policy
 policy :: TxOutRef -> TokenName -> Scripts.MintingPolicy
 policy oref tn = mkMintingPolicyScript $
     $$(PlutusTx.compile [|| \oref' tn' -> Scripts.wrapMintingPolicy $ mkPolicy oref' tn' ||])
@@ -58,6 +67,7 @@ policy oref tn = mkMintingPolicyScript $
 curSymbol :: TxOutRef -> TokenName -> CurrencySymbol
 curSymbol oref tn = scriptCurrencySymbol $ policy oref tn
 
+-- off-chain part
 type NFTSchema = Endpoint "mint" TokenName
 
 mint :: TokenName -> Contract w NFTSchema Text ()
